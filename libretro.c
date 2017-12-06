@@ -62,7 +62,6 @@ void retro_init(void)
 void retro_deinit(void)
 {
    context_destroy();
-   free(frame_buf);
    frame_buf = NULL;
 }
 
