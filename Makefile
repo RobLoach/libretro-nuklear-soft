@@ -31,7 +31,7 @@ endif
 
 
 CORE_DIR    += .
-TARGET_NAME := skeleton
+TARGET_NAME := nuklear
 LIBM		    = -lm
 
 ifeq ($(ARCHFLAGS),)
@@ -115,6 +115,8 @@ endif
 
 include Makefile.common
 
+INCLUDES += -I. -I./nuklear_soft -I./nuklear
+
 OBJECTS := $(SOURCES_C:.c=.o) $(SOURCES_CXX:.cpp=.o)
 
 CFLAGS   += -Wall -D__LIBRETRO__ $(fpic)
@@ -126,11 +128,11 @@ $(TARGET): $(OBJECTS)
 ifeq ($(STATIC_LINKING), 1)
 	$(AR) rcs $@ $(OBJECTS)
 else
-	$(CXX) $(fpic) $(SHARED) $(INCLUDES) -o $@ $(OBJECTS) $(LDFLAGS)
+	$(CC) $(fpic) $(SHARED) -o $@ $(OBJECTS) $(LDFLAGS)
 endif
 
 %.o: %.c
-	$(CXX) $(CXXFLAGS) $(fpic) -c -o $@ $<
+	$(CC) $(INCLUDES) $(CFLAGS) $(fpic) -c -o $@ $<
 
 clean:
 	rm -f $(OBJECTS) $(TARGET)

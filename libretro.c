@@ -9,15 +9,15 @@
 #if defined(_WIN32) && !defined(_XBOX)
 #include <windows.h>
 #endif
-#include "libretro.h"
+#include <libretro.h>
+#include <gui.h>
 
-#define VIDEO_WIDTH 256
-#define VIDEO_HEIGHT 384
+#define VIDEO_WIDTH 1280
+#define VIDEO_HEIGHT 720
 #define VIDEO_PIXELS VIDEO_WIDTH * VIDEO_HEIGHT
 
-static uint8_t *frame_buf;
 static struct retro_log_callback logging;
-static retro_log_printf_t log_cb;
+retro_log_printf_t log_cb;
 static bool use_audio_cb;
 static float last_aspect;
 static float last_sample_rate;
@@ -34,21 +34,34 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 }
 
 
+void context_reset(void)
+{
+   rwidth = VIDEO_WIDTH;
+   rheight = VIDEO_HEIGHT;
+   log_cb(RETRO_LOG_INFO, "Context reset\n");
+   gui_init();
+}
+
+void context_destroy(void)
+{
+   log_cb(RETRO_LOG_INFO, "Context destroy\n");
+   gui_free();
+}
+
 static retro_environment_t environ_cb;
 
 void retro_init(void)
 {
-   frame_buf = (uint8_t*)malloc(VIDEO_PIXELS * sizeof(uint32_t));
    const char *dir = NULL;
    if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir)
    {
       snprintf(retro_base_directory, sizeof(retro_base_directory), "%s", dir);
    }
-   
 }
 
 void retro_deinit(void)
 {
+   context_destroy();
    free(frame_buf);
    frame_buf = NULL;
 }
@@ -66,17 +79,17 @@ void retro_set_controller_port_device(unsigned port, unsigned device)
 void retro_get_system_info(struct retro_system_info *info)
 {
    memset(info, 0, sizeof(*info));
-   info->library_name     = "skeleton";
+   info->library_name     = "Nuklear";
    info->library_version  = "0.1";
-   info->need_fullpath    = true;
-   info->valid_extensions = "";
+   info->need_fullpath    = false;
+   info->valid_extensions = NULL;
 }
 
 static retro_video_refresh_t video_cb;
 static retro_audio_sample_t audio_cb;
 static retro_audio_sample_batch_t audio_batch_cb;
-static retro_input_poll_t input_poll_cb;
-static retro_input_state_t input_state_cb;
+retro_input_poll_t input_poll_cb;
+retro_input_state_t input_state_cb;
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
@@ -115,6 +128,9 @@ void retro_set_environment(retro_environment_t cb)
    };
 
    cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+
+   bool no_content = true;   
+   cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &no_content);
 }
 
 void retro_set_audio_sample(retro_audio_sample_t cb)
@@ -191,6 +207,8 @@ void retro_run(void)
    bool updated = false;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       check_variables();
+   gui_frame();
+   video_cb(frame_buf, rwidth, rheight, 0);
 }
 
 bool retro_load_game(const struct retro_game_info *info)
@@ -202,17 +220,26 @@ bool retro_load_game(const struct retro_game_info *info)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },
       { 0 },
    };
+   context_reset();
 
    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, desc);
 
+#ifdef M16B
+   enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
+#else
    enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
+#endif
+
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
-      log_cb(RETRO_LOG_INFO, "XRGB8888 is not supported.\n");
+#ifdef M16B
+      fprintf(stderr, "RGB565 is not supported.\n");
+#else
+      fprintf(stderr, "XRGB8888 is not supported.\n");
+#endif
       return false;
    }
 
-   snprintf(retro_game_path, sizeof(retro_game_path), "%s", info->path);
    struct retro_audio_callback audio_cb = { audio_callback, audio_set_state };
    use_audio_cb = environ_cb(RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK, &audio_cb);
 

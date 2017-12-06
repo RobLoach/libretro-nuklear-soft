@@ -50,7 +50,7 @@ int gui_init()
     screen_surface=Retro_CreateRGBSurface32(rwidth,rheight,32,0,0,0,0);
 #endif
 
-    retroscreen=screen_surface->pixels;
+    frame_buf=screen_surface->pixels;
 
     RSDL_font = (nk_retro_Font*)calloc(1, sizeof(nk_retro_Font));
     RSDL_font->width = 8; 
