@@ -27,20 +27,20 @@ static retro_environment_t environ_cb;
 retro_input_poll_t input_poll_cb;
 retro_input_state_t input_state_cb;
 
-extern int app_init(void);
-extern int app_free(void);
-extern int app_frame(void);
+extern int gui_init(void);
+extern int gui_free(void);
+extern int gui_frame(void);
 
 void context_reset(void)
 {
    fprintf(stderr, "Context reset!\n");
-   app_init();
+   gui_init();
 }
 
 void context_destroy(void)
 {
    fprintf(stderr, "Context destroy!\n");
-   app_free();
+   gui_free();
 }
 
 void retro_init(void)
@@ -202,7 +202,7 @@ void retro_run(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
       update_variables();
 
-   app_frame();
+   gui_frame();
 
    frame_count++;
 

@@ -56,7 +56,6 @@ struct nk_context *ctx;
  * and the corresponding function. */
 //#define NO_EXAMPLE
 
-#include "style.c"
 
 #if !defined(EXAMPLE_CANVAS) && !defined(NO_EXAMPLE)
 #include "node_editor.c"
@@ -64,7 +63,7 @@ struct nk_context *ctx;
 #include "overview.c"
 #endif
 
-int app_init()
+int gui_init()
 {
 #ifdef M16B
     screen_surface=Retro_CreateRGBSurface16(rwidth,rheight,16,0,0,0,0);
@@ -85,7 +84,6 @@ int app_init()
 
     /* style.c */
     /* THEME_BLACK THEME_WHITE THEME_RED THEME_BLUE THEME_DARK */
-     set_style(ctx, THEME_DARK);
 
     /* icons */
 
@@ -98,7 +96,7 @@ int app_init()
  return 0;
 }
 
-int app_free()
+int gui_free()
 {
 //FIXME: memory leak here
     free(RSDL_font);
@@ -108,7 +106,7 @@ int app_free()
  return 0;
 }
 
-int app_event()
+int gui_event()
 {
 	int evt;
 
@@ -119,7 +117,7 @@ int app_event()
  return 0;
 }
 
-int app_main()
+int gui_main()
 {
 	/* -------------- EXAMPLES ---------------- */
 	/* uncomment here and corresponding header  */
@@ -138,10 +136,10 @@ int app_main()
     return 0;
 }
 
-int app_frame()
+int gui_frame()
 {
-   	app_event();
-   	app_main();
+   	gui_event();
+   	gui_main();
 
     return 0;
 }
