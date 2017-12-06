@@ -1,11 +1,11 @@
-
 #ifndef NUKLEAR_RSDL_H
 #define NUKLEAR_RSDL_H
 
-#include "libretro-core.h"
+#include <gui.h>
 
-//RETRO HACK
-//#warning just an SDL wrapper for use SDL surface/maprgba in the core.
+/* RETRO HACK
+ * warning just an SDL wrapper for use SDL surface in the core.
+ */
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -35,7 +35,7 @@ typedef unsigned int  uint32;
 #elif defined(_MSC_VER) /* VC++ */
 #define RSDL_HAS_64BIT_TYPE	__int64
 #endif
-#endif /* !__STRICT_ANSI__ */
+#endif
 
 
 #define Uint64 unsigned long long 

@@ -19,7 +19,7 @@ endif
 
 GLES_LIB := -lGLESv3 -lEGL
 
-LOCAL_SRC_FILES += $(addprefix ../,$(wildcard *.c) ./libretro.c ./app.c ./libretro-common/glsym/rglgen.c ./libretro-common/glsym/glsym_es2.c)
+LOCAL_SRC_FILES += $(addprefix ../,$(wildcard *.c) ./libretro.c ./gui.c ./libretro-common/glsym/rglgen.c ./libretro-common/glsym/glsym_es2.c)
 LOCAL_CFLAGS += -O2 -Wall -std=gnu99 -ffast-math -DHAVE_OPENGLES2 -DHAVE_OPENGLES3 -DGLES3 -DGLES -I../libretro-common/include -I../../../example -I../../ -DAND -I/ubuntu14/home/not6/android-ndk-r11c/platforms/android-18/arch-arm/usr/include
 LOCAL_LDLIBS += $(GLES_LIB)
 

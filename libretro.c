@@ -6,7 +6,7 @@
 
 #include <libretro.h>
 
-#include "libretro-core.h"
+#include <gui.h>
 
 unsigned rwidth  = BASE_WIDTH;
 unsigned rheight = BASE_HEIGHT;

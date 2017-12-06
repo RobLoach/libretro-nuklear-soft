@@ -11,7 +11,7 @@
 #include <time.h>
 
 #include <libretro.h>
-#include "libretro-core.h"
+#include <gui.h>
 
 extern retro_log_printf_t log_cb;
 
@@ -26,40 +26,19 @@ extern retro_log_printf_t log_cb;
 #include "nuklear.h"
 #include "nuklear_retro_soft.h"
 
-// RSDL surface (implementation from RSDL_wrapper)
 static RSDL_Surface *screen_surface;
 static nk_retro_Font *RSDL_font;
-
-/* macros */
 
 #define UNUSED(a) (void)a
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
 #define LEN(a) (sizeof(a)/sizeof(a)[0])
 
-/* Platform */
-
 float bg[4];
 struct nk_color background;
-/* GUI */
 struct nk_context *ctx;
 
-/* ===============================================================
- *
- *                          EXAMPLE
- *
- * ===============================================================*/
-
-
-/* This are some code examples to provide a small overview of what can be
- * done with this library. To try out an example uncomment the include
- * and the corresponding function. */
-//#define NO_EXAMPLE
-
-
 #if !defined(EXAMPLE_CANVAS) && !defined(NO_EXAMPLE)
-#include "node_editor.c"
-#include "calculator.c"
 #include "overview.c"
 #endif
 
@@ -79,68 +58,53 @@ int gui_init()
     if (!RSDL_font)
         return -1;
 
-    /* GUI */
     ctx = nk_retro_init(RSDL_font,screen_surface,rwidth,rheight);
-
-    /* style.c */
-    /* THEME_BLACK THEME_WHITE THEME_RED THEME_BLUE THEME_DARK */
-
-    /* icons */
 
 #if !defined(EXAMPLE_CANVAS) && !defined(NO_EXAMPLE)
     background = nk_rgb(28,48,62);
 #endif
 
-	log_cb(RETRO_LOG_INFO, "Init nuklear %d\n",0);
+   log_cb(RETRO_LOG_INFO, "Init nuklear %d\n",0);
 
- return 0;
+   return 0;
 }
 
 int gui_free()
 {
-//FIXME: memory leak here
     free(RSDL_font);
     nk_retro_shutdown();
     Retro_FreeSurface(screen_surface);
 
- return 0;
+   return 0;
 }
 
 int gui_event()
 {
-	int evt;
+   int evt;
 
-	nk_input_begin(ctx);
-	nk_retro_handle_event(&evt,1);
-	nk_input_end(ctx);
+   nk_input_begin(ctx);
+   nk_retro_handle_event(&evt,1);
+   nk_input_end(ctx);
 
- return 0;
+   return 0;
 }
 
 int gui_main()
 {
-	/* -------------- EXAMPLES ---------------- */
-	/* uncomment here and corresponding header  */
-	/* to enable demo example		    */
-#if !defined(EXAMPLE_CANVAS) && !defined(NO_EXAMPLE)
-	calculator(ctx);
-	overview(ctx);
-	node_editor(ctx);
-#endif
-	/* ----------------------------------------- */
 
-	/* Draw */
-	// nk_color_fv(bg, background);
-	nk_retro_render(nk_rgb(30,30,30));
+#if !defined(EXAMPLE_CANVAS) && !defined(NO_EXAMPLE)
+   overview(ctx);
+#endif
+   nk_retro_render(nk_rgb(30,30,30));
 
     return 0;
 }
 
 int gui_frame()
 {
-   	gui_event();
-   	gui_main();
+   gui_event();
+   gui_main();
 
-    return 0;
+   return 0;
 }
 

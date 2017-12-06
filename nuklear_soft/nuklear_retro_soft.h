@@ -1,19 +1,6 @@
-/*
- * Nuklear - v1.17 - public domain
- * no warrenty implied; use at your own risk.
- * authored from 2015-2016 by Micha Mettke
- */
-/*
- * ==============================================================
- *
- *                              API
- *
- * ===============================================================
- */
 #ifndef NK_RSDL_H_
 #define NK_RSDL_H_
 
-// RSDL_surface/RSDL_maprgba (implementation from RSDL_wrapper)
 #include "RSDL_wrapper.h"
 
 typedef struct nk_retro_Font nk_retro_Font;
@@ -387,10 +374,8 @@ nk_retro_render(struct nk_color clear)
     }
     nk_retro_blit(retro.screen_surface);
     nk_clear(&retro.ctx);
-	
-	//FIXME draw only in fullscreen or mouse grabbed or when joypad emulate mouse
-	if(revent.showpointer==1)draw_cross(retro.screen_surface,revent.gmx,revent.gmy);
 
+    if(revent.showpointer==1)draw_cross(retro.screen_surface,revent.gmx,revent.gmy);
 }
 
 static void
