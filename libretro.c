@@ -1,62 +1,56 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <math.h>
 
-#include <libretro.h>
-
-#include <gui.h>
-
-unsigned rwidth  = BASE_WIDTH;
-unsigned rheight = BASE_HEIGHT;
-#ifdef M16B
-unsigned short int *retroscreen;
-#else
-unsigned int *retroscreen;
+#include <stdio.h>
+#if defined(_WIN32) && !defined(_XBOX)
+#include <windows.h>
 #endif
-float retro_fps = 60.0;
+#include "libretro.h"
 
-retro_log_printf_t log_cb;
+#define VIDEO_WIDTH 256
+#define VIDEO_HEIGHT 384
+#define VIDEO_PIXELS VIDEO_WIDTH * VIDEO_HEIGHT
 
-static retro_video_refresh_t video_cb;
-static retro_audio_sample_t audio_cb;
-static retro_audio_sample_batch_t audio_batch_cb;
+static uint8_t *frame_buf;
+static struct retro_log_callback logging;
+static retro_log_printf_t log_cb;
+static bool use_audio_cb;
+static float last_aspect;
+static float last_sample_rate;
+char retro_base_directory[4096];
+char retro_game_path[4096];
+
+static void fallback_log(enum retro_log_level level, const char *fmt, ...)
+{
+   (void)level;
+   va_list va;
+   va_start(va, fmt);
+   vfprintf(stderr, fmt, va);
+   va_end(va);
+}
+
+
 static retro_environment_t environ_cb;
-
-retro_input_poll_t input_poll_cb;
-retro_input_state_t input_state_cb;
-
-extern int gui_init(void);
-extern int gui_free(void);
-extern int gui_frame(void);
-
-void context_reset(void)
-{
-   fprintf(stderr, "Context reset!\n");
-   gui_init();
-}
-
-void context_destroy(void)
-{
-   fprintf(stderr, "Context destroy!\n");
-   gui_free();
-}
 
 void retro_init(void)
 {
-
-   struct retro_log_callback log;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &log))
-      log_cb = log.log;
-   else
-      log_cb = NULL;
+   frame_buf = (uint8_t*)malloc(VIDEO_PIXELS * sizeof(uint32_t));
+   const char *dir = NULL;
+   if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &dir) && dir)
+   {
+      snprintf(retro_base_directory, sizeof(retro_base_directory), "%s", dir);
+   }
+   
 }
 
 void retro_deinit(void)
 {
-   context_destroy();
+   free(frame_buf);
+   frame_buf = NULL;
 }
 
 unsigned retro_api_version(void)
@@ -66,105 +60,61 @@ unsigned retro_api_version(void)
 
 void retro_set_controller_port_device(unsigned port, unsigned device)
 {
-   (void)port;
-   (void)device;
+   log_cb(RETRO_LOG_INFO, "Plugging device %u into port %u.\n", device, port);
 }
 
 void retro_get_system_info(struct retro_system_info *info)
 {
    memset(info, 0, sizeof(*info));
-   info->library_name     = "Nuklear Soft Libretro";
-   info->library_version  = "v1.18";
-   info->need_fullpath    = false;
-   info->valid_extensions = NULL; // Anything is fine, we don't care.
+   info->library_name     = "skeleton";
+   info->library_version  = "0.1";
+   info->need_fullpath    = true;
+   info->valid_extensions = "";
 }
 
-
-static void update_variables(void)
-{
-   struct retro_variable var = {
-      .key = "nuklear_resolution",
-   };
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      char *pch;
-      char str[100];
-      snprintf(str, sizeof(str), "%s", var.value);
-      
-      pch = strtok(str, "x");
-      if (pch)
-         rwidth = strtoul(pch, NULL, 0);
-      pch = strtok(NULL, "x");
-      if (pch)
-         rheight = strtoul(pch, NULL, 0);
-
-      fprintf(stderr, "[libretro-Nuklear]: Got size: %u x %u.\n", rwidth, rheight);
-
-      struct retro_system_av_info ninfo;
-
-      retro_get_system_av_info(&ninfo);
-
-      environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &ninfo);
-
-      if (log_cb)
-         log_cb(RETRO_LOG_INFO, "ChangeAV: w:%d h:%d ra:%f.\n",
-               ninfo.geometry.base_width, ninfo.geometry.base_height, ninfo.geometry.aspect_ratio);
-   }
-
-}
+static retro_video_refresh_t video_cb;
+static retro_audio_sample_t audio_cb;
+static retro_audio_sample_batch_t audio_batch_cb;
+static retro_input_poll_t input_poll_cb;
+static retro_input_state_t input_state_cb;
 
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
-
-   bool updated = false;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
-      update_variables();
+   float aspect                = 0.0f;
+   float sampling_rate         = 30000.0f;
 
 
-   info->geometry.base_width  = rwidth;
-   info->geometry.base_height = rheight;
+   info->geometry.base_width   = VIDEO_WIDTH;
+   info->geometry.base_height  = VIDEO_HEIGHT;
+   info->geometry.max_width    = VIDEO_WIDTH;
+   info->geometry.max_height   = VIDEO_HEIGHT;
+   info->geometry.aspect_ratio = aspect;
 
-   if (log_cb)
-      log_cb(RETRO_LOG_INFO, "AV_INFO: width=%d height=%d\n",info->geometry.base_width,info->geometry.base_height);
-
-   info->geometry.max_width   = MAX_WIDTH;
-   info->geometry.max_height  = MAX_HEIGHT;
-
-   if (log_cb)
-      log_cb(RETRO_LOG_INFO, "AV_INFO: max_width=%d max_height=%d\n",info->geometry.max_width,info->geometry.max_height);
-
-   info->geometry.aspect_ratio = (float)rwidth/rheight;
-
-   if (log_cb)
-      log_cb(RETRO_LOG_INFO, "AV_INFO: aspect_ratio = %f\n",info->geometry.aspect_ratio);
-
-   info->timing.fps            = retro_fps;
-   info->timing.sample_rate    = 44100.0;
-
-   if (log_cb)
-      log_cb(RETRO_LOG_INFO, "AV_INFO: fps = %f sample_rate = %f\n",info->timing.fps,info->timing.sample_rate);
-
+   last_aspect                 = aspect;
+   last_sample_rate            = sampling_rate;
 }
 
-
+static struct retro_rumble_interface rumble;
 
 void retro_set_environment(retro_environment_t cb)
 {
    environ_cb = cb;
 
-   struct retro_variable variables[] = {
-      {
-         "nuklear_resolution",
-         "Internal resolution; 320x240|360x480|480x272|512x384|512x512|640x240|640x448|640x480|720x576|800x600|960x720|1024x768|1024x1024|1280x720|1200x800|1280x960|1600x900|1600x1200|1920x1080|1920x1440|1920x1600|2048x2048",
-      },
+   if (cb(RETRO_ENVIRONMENT_GET_LOG_INTERFACE, &logging))
+      log_cb = logging.log;
+   else
+      log_cb = fallback_log;
 
-      { NULL, NULL },
+   static const struct retro_controller_description controllers[] = {
+      { "Nintendo DS", RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0) },
    };
 
-   bool no_rom = true;
-   cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &no_rom);
-   cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
+   static const struct retro_controller_info ports[] = {
+      { controllers, 1 },
+      { NULL, 0 },
+   };
+
+   cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
 }
 
 void retro_set_audio_sample(retro_audio_sample_t cb)
@@ -192,51 +142,90 @@ void retro_set_video_refresh(retro_video_refresh_t cb)
    video_cb = cb;
 }
 
+static unsigned x_coord;
+static unsigned y_coord;
+static unsigned phase;
+static int mouse_rel_x;
+static int mouse_rel_y;
 
-static unsigned frame_count;
+void retro_reset(void)
+{
+   x_coord = 0;
+   y_coord = 0;
+}
 
+static void update_input(void)
+{
+
+}
+
+
+static void check_variables(void)
+{
+
+}
+
+static void audio_callback(void)
+{
+   for (unsigned i = 0; i < 30000 / 60; i++, phase++)
+   {
+      int16_t val = 0x800 * sinf(2.0f * M_PI * phase * 300.0f / 30000.0f);
+      audio_cb(val, val);
+   }
+
+   phase %= 100;
+}
+
+static void audio_set_state(bool enable)
+{
+   (void)enable;
+}
 
 void retro_run(void)
 {
+   unsigned i;
+   update_input();
+
+
+
    bool updated = false;
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
-      update_variables();
-
-   gui_frame();
-
-   frame_count++;
-
-   video_cb(retroscreen, rwidth, rheight, 0);
+      check_variables();
 }
 
 bool retro_load_game(const struct retro_game_info *info)
 {
-  // update_variables();
-#ifdef M16B
-   enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
-#else
-   enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
-#endif
+   struct retro_input_descriptor desc[] = {
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT,  "Left" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,    "Up" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,  "Down" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },
+      { 0 },
+   };
 
+   environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, desc);
+
+   enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
-#ifdef M16B
-      fprintf(stderr, "RGB565 is not supported.\n");
-#else
-      fprintf(stderr, "XRGB8888 is not supported.\n");
-#endif
+      log_cb(RETRO_LOG_INFO, "XRGB8888 is not supported.\n");
       return false;
    }
 
-   context_reset();
+   snprintf(retro_game_path, sizeof(retro_game_path), "%s", info->path);
+   struct retro_audio_callback audio_cb = { audio_callback, audio_set_state };
+   use_audio_cb = environ_cb(RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK, &audio_cb);
 
-   fprintf(stderr, "Loaded game!\n");
+   check_variables();
+
    (void)info;
    return true;
 }
 
 void retro_unload_game(void)
-{}
+{
+
+}
 
 unsigned retro_get_region(void)
 {
@@ -245,28 +234,21 @@ unsigned retro_get_region(void)
 
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info, size_t num)
 {
-   (void)type;
-   (void)info;
-   (void)num;
    return false;
 }
 
 size_t retro_serialize_size(void)
 {
-   return 0;
-}
-
-bool retro_serialize(void *data, size_t size)
-{
-   (void)data;
-   (void)size;
    return false;
 }
 
-bool retro_unserialize(const void *data, size_t size)
+bool retro_serialize(void *data_, size_t size)
 {
-   (void)data;
-   (void)size;
+   return false;
+}
+
+bool retro_unserialize(const void *data_, size_t size)
+{
    return false;
 }
 
@@ -281,9 +263,6 @@ size_t retro_get_memory_size(unsigned id)
    (void)id;
    return 0;
 }
-
-void retro_reset(void)
-{}
 
 void retro_cheat_reset(void)
 {}
