@@ -1,0 +1,5 @@
+SOURCES_C   := $(CORE_DIR)/libretro.c \
+               $(CORE_DIR)/gui.c \
+               $(CORE_DIR)/nuklear_soft/retro_surface.c \
+               $(CORE_DIR)/nuklear_soft/SDL_gfxPrimitives.c
+SOURCES_CXX := 
