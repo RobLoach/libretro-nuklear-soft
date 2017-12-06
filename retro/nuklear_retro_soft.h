@@ -531,7 +531,7 @@ static void mousebut(int but,int down,int x,int y){
  	if(but==1)nk_input_button(ctx, NK_BUTTON_LEFT, x, y, down);
  	else if(but==2)nk_input_button(ctx, NK_BUTTON_RIGHT, x, y, down);
  	else if(but==3)nk_input_button(ctx, NK_BUTTON_MIDDLE, x, y, down);
-	else if(but==4)nk_input_scroll(ctx,(float)down);
+	//else if(but==4)nk_input_scroll(ctx,(float)down);
 	//printf("but:%d %s (%d,%d)\n",but,down==1?"pressed":"released",x,y);
 }
 
