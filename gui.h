@@ -18,12 +18,12 @@
 #define MPITCH 2
 #endif
 
-unsigned rwidth;
-unsigned rheight;
+extern unsigned rwidth;
+extern unsigned rheight;
 #ifdef M16B
-unsigned short int *frame_buf;
+extern unsigned short int *frame_buf;
 #else
-unsigned int *frame_buf;
+extern unsigned int *frame_buf;|
 #endif
 
 int gui_init();

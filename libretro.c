@@ -12,6 +12,14 @@
 #include <libretro.h>
 #include <gui.h>
 
+unsigned rwidth;
+unsigned rheight;
+#ifdef M16B
+unsigned short int *frame_buf;
+#else
+unsigned int *frame_buf;
+#endif
+
 #define VIDEO_WIDTH 1280
 #define VIDEO_HEIGHT 720
 #define VIDEO_PIXELS VIDEO_WIDTH * VIDEO_HEIGHT
